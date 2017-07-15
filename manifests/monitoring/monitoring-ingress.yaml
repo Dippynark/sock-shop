@@ -1,0 +1,38 @@
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: monitoring
+  namespace: monitoring
+  annotations:
+    kubernetes.io/ingress.global-static-ip-name: "monitoring-static-ip"
+    kubernetes.io/tls-acme: "true"
+    kubernetes.io/ingress.class: "gce"
+    #ingress.kubernetes.io/auth-realm: Authentication Required
+    #ingress.kubernetes.io/auth-secret: internal-services-auth
+    #ingress.kubernetes.io/auth-type: basic
+    #kubernetes.io/ingress.allow-http: "false"
+  labels:
+    name: monitoring
+spec:
+  tls:
+  - hosts:
+    - prometheus.socks.lukeaddison.co.uk
+    secretName: prometheus-socks-tls
+  - hosts:
+    - grafana.socks.lukeaddison.co.uk
+    secretName: grafana-socks-tls
+  rules:
+  - host: prometheus.socks.lukeaddison.co.uk
+    http:
+      paths:
+      - path: /*
+        backend:
+          serviceName: prometheus
+          servicePort: 9090
+  - host: grafana.socks.lukeaddison.co.uk
+    http:
+      paths:
+      - path: /*
+        backend:
+          serviceName: grafana
+          servicePort: 3000

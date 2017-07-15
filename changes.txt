@@ -1,0 +1,11 @@
+Changes:
+Used peristent volume claim for /data/db-users in user-db.yaml. Add securityContext to make it writeable
+Redirect HTTP to HTTPS
+
+TODO:
+Read about readiness/liveness probes and apply them to the ingress container 
+Use persistent volume claims for all persistent data
+Add resource limits to all new pods (e.g. nginx pods for ingress)
+
+Questions:
+How would I do HA sessions? How would I make sure a session continued even if the session pod died
