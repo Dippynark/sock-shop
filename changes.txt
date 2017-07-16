@@ -1,11 +1,29 @@
-Changes:
-Used peristent volume claim for /data/db-users in user-db.yaml. Add securityContext to make it writeable
-Redirect HTTP to HTTPS
-
 TODO:
 Read about readiness/liveness probes and apply them to the ingress container 
 Use persistent volume claims for all persistent data
 Add resource limits to all new pods (e.g. nginx pods for ingress)
+Add rediness/liveness probes to all pods
+Deploy alerting
+Autoscaling
+Alerting
+
+Best Practices:
+TODO:
+liveness/readiness checks
+persistent data
+ensure there is never more than one deployment when there is only one 1 persistent volume claim
+resource quotas
 
 Questions:
 How would I do HA sessions? How would I make sure a session continued even if the session pod died
+Is it better to have one nginx deployment directing traffic to ingress or to have one container in each deployment pod
+How can you make grafana persist user login informaiton
+
+Main focus:
+Monitoring
+Persistent storage
+Security
+
+For next time:
+HA databases
+Network Policy

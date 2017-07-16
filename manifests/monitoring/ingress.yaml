@@ -1,0 +1,92 @@
+---
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: monitoring
+  namespace: monitoring
+  annotations:
+    kubernetes.io/ingress.global-static-ip-name: "monitoring-static-ip"
+    kubernetes.io/tls-acme: "true"
+    kubernetes.io/ingress.class: "gce"
+  labels:
+    name: monitoring
+spec:
+  tls:
+  - secretName: monitoring-tls
+    hosts:
+    - prometheus.socks.lukeaddison.co.uk
+    - grafana.socks.lukeaddison.co.uk 
+    - kibana.socks.lukeaddison.co.uk
+  rules:
+  - host: prometheus.socks.lukeaddison.co.uk
+    http:
+      paths:
+      - backend:
+          serviceName: prometheus
+          servicePort: 9090
+  - host: grafana.socks.lukeaddison.co.uk
+    http:
+      paths:
+      - backend:
+          serviceName: grafana
+          servicePort: 3000
+  - host: kibana.socks.lukeaddison.co.uk
+    http:
+      paths:
+      - backend:
+          serviceName: kibana
+          servicePort: 5601
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: prometheus-ingress
+  namespace: monitoring
+spec:
+  type: NodePort
+  ports:
+  - name: prometheus-ingress
+    protocol: TCP
+    port: 80
+    targetPort: 80
+    nodePort: 30002
+  selector:
+    app: nginx
+    component: core
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: grafana-ingress
+  namespace: monitoring
+spec:
+  type: NodePort
+  ports:
+  - name: grafana-ingress
+    protocol: TCP
+    port: 80
+    targetPort: 80
+    nodePort: 30003
+  selector:
+    app: nginx
+    component: core
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kibana-ingress
+  namespace: monitoring
+spec:
+  type: NodePort
+  ports:
+  - name: kibana-ingress
+    protocol: TCP
+    port: 80
+    targetPort: 80
+    nodePort: 30004
+  selector:
+    app: nginx
+    component: core
+
+
+

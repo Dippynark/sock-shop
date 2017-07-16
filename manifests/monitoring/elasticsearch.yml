@@ -1,0 +1,58 @@
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: elasticsearch-pvc
+  namespace: monitoring
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 20Gi
+  storageClassName: standard
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: elasticsearch
+  namespace: monitoring
+  labels:
+    name: elasticsearch
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        name: elasticsearch
+    spec:
+      containers:
+      - image: elasticsearch
+        name: elasticsearch
+        ports:
+        - name: elasticsearch
+          containerPort: 9200
+        volumeMounts:
+        - name: elasticsearch-pv
+          mountPath: /usr/share/elasticsearch/data
+      volumes:
+        - name: elasticsearch-pv
+          persistentVolumeClaim:
+            claimName: elasticsearch-pvc
+      nodeSelector:
+        beta.kubernetes.io/os: linux
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: elasticsearch
+  namespace: monitoring
+  labels:
+    name: elasticsearch
+spec:
+  ports:
+  - port: 9200
+    targetPort: 9200
+  selector:
+    name: elasticsearch
+

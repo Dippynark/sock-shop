@@ -32,11 +32,16 @@ spec:
               - SETUID
           readOnlyRootFilesystem: true
         volumeMounts:
-        - mountPath: /tmp
-          name: tmp-volume
+        - name: tmp-volume
+          mountPath: /tmp          
+        - name: db-users-storage
+          mountPath: /data/db-users
       volumes:
         - name: tmp-volume
           emptyDir:
             medium: Memory
+        - name: db-users-storage
+          persistentVolumeClaim:
+            claimName: user-db-pvc  
       nodeSelector:
         beta.kubernetes.io/os: linux

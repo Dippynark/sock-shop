@@ -1,0 +1,202 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: nginx-deployment
+  namespace: monitoring
+spec:
+  replicas: 1
+  strategy:
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 1
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      app: nginx
+      component: core
+  template:
+    metadata:
+      name: nginx
+      labels:
+        app: nginx
+        component: core
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.12
+        ports:
+          - containerPort: 80
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 80
+          periodSeconds: 1
+          timeoutSeconds: 1
+          successThreshold: 1
+          failureThreshold: 10
+        volumeMounts:
+        - name: config-volume
+          mountPath: /etc/nginx/conf.d
+        - name: secret-volume
+          mountPath: /mnt
+      volumes:
+      - name: config-volume
+        configMap:
+          name: nginx-ingress
+      - name: secret-volume
+        secret:
+          secretName: nginx-ingress-basic-auth
+      nodeSelector:
+        beta.kubernetes.io/os: linux
+---
+apiVersion: v1
+data:
+  # Username: user, Password: password
+  .htpasswd: dXNlcjokYXByMSRLTmNFUzlITiRzNG5jNC9JSVp0OUl2V2VIZndjWDIuCg==
+kind: Secret
+metadata:
+  name: nginx-ingress-basic-auth
+  namespace: monitoring
+type: Opaque
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-ingress
+  namespace: monitoring
+data:
+  prometheus.socks.lukeaddison.co.uk.conf: |
+    upstream prometheus {
+      server prometheus:9090;
+    }
+
+    server {
+      listen 80;
+      server_name prometheus.socks.lukeaddison.co.uk;
+      root /var/www/html;
+
+      # Proxy the health check to the upstream server at /
+      location /healthz {
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header Host $http_host;
+        proxy_redirect off;
+        proxy_next_upstream error;
+        proxy_pass http://prometheus/graph;
+        break;
+      }
+
+      # Proxy everything else to the upstream server, enforcing HTTPS
+      location / {
+        
+        # Enable basic auth
+        auth_basic "Restricted";                                
+        auth_basic_user_file /mnt/.htpasswd;
+
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header Host $http_host;
+        proxy_redirect off;
+        proxy_next_upstream error;
+
+        # Any request that did not originally come in over HTTPS gets redirected
+        if ($http_x_forwarded_proto != "https") {
+          rewrite ^(.*)$ https://$server_name$1 permanent;
+        }
+
+        proxy_pass http://prometheus;
+
+        # Add HTTP Strict Transport Security for good measure.
+        add_header Strict-Transport-Security "max-age=31536000; includeSubDomains;";
+      }
+    }
+  grafana.socks.lukeaddison.co.uk.conf: |
+    upstream grafana {
+      server grafana:3000;
+    }
+
+    server {
+      listen 80;
+      server_name grafana.socks.lukeaddison.co.uk;
+      root /var/www/html;
+
+      # Proxy the health check to the upstream server at /
+      location /healthz {
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header Host $http_host;
+        proxy_redirect off;
+        proxy_next_upstream error;
+        proxy_pass http://grafana/login;
+        break;
+      }
+
+      # Proxy everything else to the upstream server, enforcing HTTPS
+      location / {
+
+        # Enable basic auth
+        #auth_basic "Restricted";                                
+        #auth_basic_user_file /mnt/.htpasswd;
+
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header Host $http_host;
+        proxy_redirect off;
+        proxy_next_upstream error;
+
+        # Any request that did not originally come in over HTTPS gets redirected
+        if ($http_x_forwarded_proto != "https") {
+          rewrite ^(.*)$ https://$server_name$1 permanent;
+        }
+
+        proxy_pass http://grafana;
+
+        # Add HTTP Strict Transport Security for good measure.
+        add_header Strict-Transport-Security "max-age=31536000; includeSubDomains;";
+      }
+    }
+  kibana.socks.lukeaddison.co.uk.conf: |
+    upstream kibana {
+      server kibana:5601;
+    }
+
+    server {
+      listen 80;
+      server_name kibana.socks.lukeaddison.co.uk;
+      root /var/www/html;
+
+      # Proxy the health check to the upstream server at /
+      location /healthz {
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header Host $http_host;
+        proxy_redirect off;
+        proxy_next_upstream error;
+        proxy_pass http://kibana/;
+        break;
+      }
+
+      # Proxy everything else to the upstream server, enforcing HTTPS
+      location / {
+
+        # Enable basic auth
+        auth_basic "Restricted";                                
+        auth_basic_user_file /mnt/.htpasswd;
+
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header Host $http_host;
+        proxy_redirect off;
+        proxy_next_upstream error;
+
+        # Any request that did not originally come in over HTTPS gets redirected
+        if ($http_x_forwarded_proto != "https") {
+          rewrite ^(.*)$ https://$server_name$1 permanent;
+        }
+
+        proxy_pass http://kibana;
+
+        # Add HTTP Strict Transport Security for good measure.
+        add_header Strict-Transport-Security "max-age=31536000; includeSubDomains;";
+      }
+    }
