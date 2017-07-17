@@ -35,3 +35,11 @@ spec:
          ports:
           - name: kibana
             containerPort: 5601
+         readinessProbe:
+          httpGet:
+            path: /
+            port: 5601
+          periodSeconds: 1
+          timeoutSeconds: 1
+          successThreshold: 1
+          failureThreshold: 10

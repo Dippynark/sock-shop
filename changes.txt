@@ -5,7 +5,9 @@ Add resource limits to all new pods (e.g. nginx pods for ingress)
 Add rediness/liveness probes to all pods
 Deploy alerting
 Autoscaling
-Alerting
+Alert Manager
+Configure proper kibana health checks (rather than just redirecting to grafana)
+Make sure basic authentication uses HTTPS
 
 Best Practices:
 TODO:
@@ -13,16 +15,24 @@ liveness/readiness checks
 persistent data
 ensure there is never more than one deployment when there is only one 1 persistent volume claim
 resource quotas
+version every image
+Add .spec.strategy.type==Recreate to all deployments
 
 Questions:
 How would I do HA sessions? How would I make sure a session continued even if the session pod died
 Is it better to have one nginx deployment directing traffic to ingress or to have one container in each deployment pod
-How can you make grafana persist user login informaiton
+How can I do HTTP redirects and kibana health checks
+Is the nginx basic auth served over HTTP or HTTPS
+How con I configure readiness checks for kibana? It always returns 301
 
 Main focus:
 Monitoring
 Persistent storage
 Security
+
+Kuberentes Docs to read:
+Disruptions
+ComponentStatuses
 
 For next time:
 HA databases

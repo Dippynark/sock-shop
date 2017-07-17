@@ -12,25 +12,25 @@ metadata:
     name: monitoring
 spec:
   tls:
-  - secretName: monitoring-tls
+  - secretName: monitoring-dippynark-tls
     hosts:
-    - prometheus.socks.lukeaddison.co.uk
-    - grafana.socks.lukeaddison.co.uk 
-    - kibana.socks.lukeaddison.co.uk
+    - prometheus.socks.dippynark.co.uk
+    - grafana.socks.dippynark.co.uk 
+    - kibana.socks.dippynark.co.uk
   rules:
-  - host: prometheus.socks.lukeaddison.co.uk
+  - host: prometheus.socks.dippynark.co.uk
     http:
       paths:
       - backend:
           serviceName: prometheus
           servicePort: 9090
-  - host: grafana.socks.lukeaddison.co.uk
+  - host: grafana.socks.dippynark.co.uk
     http:
       paths:
       - backend:
           serviceName: grafana
           servicePort: 3000
-  - host: kibana.socks.lukeaddison.co.uk
+  - host: kibana.socks.dippynark.co.uk
     http:
       paths:
       - backend:

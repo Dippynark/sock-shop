@@ -14,7 +14,7 @@ spec:
         name: fluentd
     spec:
       containers:
-       - image: weaveworksdemos/log-server
+       - image: weaveworksdemos/log-server:0.1.1
          name: fluentd
          env:
             - name: FLUENTD_CONF
