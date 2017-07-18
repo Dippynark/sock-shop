@@ -1,16 +1,17 @@
 ---
 apiVersion: v1
-kind: PersistentVolumeClaim
+kind: Service
 metadata:
-  name: elasticsearch-pvc
+  name: elasticsearch
   namespace: monitoring
+  labels:
+    name: elasticsearch
 spec:
-  accessModes:
-  - ReadWriteOnce
-  resources:
-    requests:
-      storage: 20Gi
-  storageClassName: standard
+  ports:
+  - port: 9200
+    targetPort: 9200
+  selector:
+    name: elasticsearch
 ---
 apiVersion: extensions/v1beta1
 kind: Deployment
@@ -31,11 +32,20 @@ spec:
         name: elasticsearch
     spec:
       containers:
-      - image: elasticsearch
+      - image: elasticsearch:5.5.0
         name: elasticsearch
         ports:
         - name: elasticsearch
           containerPort: 9200
+        livenessProbe:
+          tcpSocket:
+            port: 9200
+          initialDelaySeconds: 60
+          periodSeconds: 3
+        readinessProbe:
+          tcpSocket:
+            port: 9200
+          periodSeconds: 3
         volumeMounts:
         - name: elasticsearch-pv
           mountPath: /usr/share/elasticsearch/data
@@ -45,18 +55,5 @@ spec:
             claimName: elasticsearch-pvc
       nodeSelector:
         beta.kubernetes.io/os: linux
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: elasticsearch
-  namespace: monitoring
-  labels:
-    name: elasticsearch
-spec:
-  ports:
-  - port: 9200
-    targetPort: 9200
-  selector:
-    name: elasticsearch
+
 

@@ -2,49 +2,63 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: kibana
+  name: front-end
   labels:
-    name: kibana
-  namespace: monitoring
+    name: front-end
+  namespace: sock-shop
 spec:
   type: NodePort
   ports:
-  - port: 5601
+  - port: 80
     targetPort: 80
-    nodePort: 31601
+    nodePort: 30001
   selector:
-    name: kibana
+    name: front-end
 ---
 apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
-  name: kibana
-  namespace: monitoring
-  labels:
-    name: kibana
+  name: front-end
+  namespace: sock-shop
 spec:
-  replicas: 1
+  replicas: 3
   template:
     metadata:
       labels:
-        name: kibana
+        name: front-end
     spec:
       containers:
-      - image: kibana:5.5.0
-        name: kibana
+      - name: front-end
+        image: weaveworksdemos/front-end:0.3.12
+        resources:
+          limits:
+            cpu: 300m
+            memory: 1000Mi
+          requests:
+            cpu: 100m
+            memory: 300Mi
         ports:
-          - name: kibana
-            containerPort: 5601
-        readinessProbe:
-          httpGet:
-            path: /
-            port: 5601
-          periodSeconds: 3
+        - containerPort: 8079
+        env:
+        - name: SESSION_REDIS
+          value: "true"
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 10001
+          capabilities:
+            drop:
+              - all
+          readOnlyRootFilesystem: true
         livenessProbe:
           httpGet:
             path: /
-            port: 5601
-          initialDelaySeconds: 60
+            port: 8079
+          initialDelaySeconds: 300
+          periodSeconds: 3
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 8079
           periodSeconds: 3
       - name: nginx-sidecar
         image: nginx:1.12
@@ -62,32 +76,28 @@ spec:
           initialDelaySeconds: 60
           periodSeconds: 3
         volumeMounts:
-        - name: nginx-sidecar-config
+        - name: front-end-config-volume
           mountPath: /etc/nginx/conf.d
-        - name: nginx-basic-auth
-          mountPath: /mnt
       volumes:
-      - name: nginx-basic-auth
-        secret:
-          secretName: basic-auth
-      - name: nginx-sidecar-config
+      - name: front-end-config-volume
         configMap:
-          name: kibana-nginx-sidecar
+          name: front-end
+      nodeSelector:
+        beta.kubernetes.io/os: linux
 ---
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: kibana-nginx-sidecar
-  namespace: monitoring
+  name: front-end
 data:
-  kibana.socks.dippynark.co.uk.conf: |
-    upstream kibana {
-      server localhost:5601;
+  socks.lukeaddison.co.uk.conf: |
+    upstream front-end {
+      server localhost:8079;
     }
 
     server {
       listen 80;
-      server_name kibana.socks.dippynark.co.uk;
+      server_name socks.lukeaddison.co.uk;
       root /var/www/html;
 
       # Proxy the health check to the upstream server at /
@@ -97,13 +107,12 @@ data:
         proxy_set_header Host $http_host;
         proxy_redirect off;
         proxy_next_upstream error;
-        proxy_pass http://kibana/;
+        proxy_pass http://front-end/;
         break;
       }
 
       # Proxy everything else to the upstream server, enforcing HTTPS
       location / {
-
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header Host $http_host;
@@ -113,13 +122,9 @@ data:
         # Any request that did not originally come in over HTTPS gets redirected
         if ($http_x_forwarded_proto != "https") {
           rewrite ^(.*)$ https://$server_name$1 permanent;
-        }             
+        }
 
-        # Enable basic auth
-        auth_basic "Restricted";                                
-        auth_basic_user_file /mnt/.htpasswd;
-
-        proxy_pass http://kibana;
+        proxy_pass http://front-end;
 
         # Add HTTP Strict Transport Security for good measure.
         add_header Strict-Transport-Security "max-age=31536000; includeSubDomains;";

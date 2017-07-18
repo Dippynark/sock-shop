@@ -1,22 +1,15 @@
-TODO:
-Read about readiness/liveness probes and apply them to the ingress container 
+TODO: 
 Use persistent volume claims for all persistent data
 Add resource limits to all new pods (e.g. nginx pods for ingress)
-Add rediness/liveness probes to all pods
-Deploy alerting
 Autoscaling
 Alert Manager
-Configure proper kibana health checks (rather than just redirecting to grafana)
-Make sure basic authentication uses HTTPS
+Add liveness and readiness to fluentd
+Use ant-affinity
 
 Best Practices:
 TODO:
-liveness/readiness checks
 persistent data
-ensure there is never more than one deployment when there is only one 1 persistent volume claim
 resource quotas
-version every image
-Add .spec.strategy.type==Recreate to all deployments
 
 Questions:
 How would I do HA sessions? How would I make sure a session continued even if the session pod died
@@ -24,6 +17,8 @@ Is it better to have one nginx deployment directing traffic to ingress or to hav
 How can I do HTTP redirects and kibana health checks
 Is the nginx basic auth served over HTTP or HTTPS
 How con I configure readiness checks for kibana? It always returns 301
+What's the point on having initial delay for readiness probes
+Why have you not put liveness probes on the kube-lego deployment?
 
 Main focus:
 Monitoring
@@ -37,3 +32,5 @@ ComponentStatuses
 For next time:
 HA databases
 Network Policy
+
+

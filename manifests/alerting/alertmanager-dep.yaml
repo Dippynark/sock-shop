@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
       - name: alertmanager
-        image: prom/alertmanager:latest
+        image: prom/alertmanager:v0.7.1
         env:
           - name: SLACK_HOOK_URL
             valueFrom:

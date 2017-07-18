@@ -1,24 +1,4 @@
 ---
-apiVersion: rbac.authorization.k8s.io/v1beta1
-kind: ClusterRole
-metadata:
-  name: prometheus
-  namespace: monitoring
-rules:
-- apiGroups: [""]
-  resources:
-  - nodes
-  - services
-  - endpoints
-  - pods
-  verbs: ["get", "list", "watch"]
-- apiGroups: [""]
-  resources:
-  - configmaps
-  verbs: ["get"]
-- nonResourceURLs: ["/metrics"]
-  verbs: ["get"]
----
 apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -26,10 +6,25 @@ metadata:
   namespace: monitoring
 ---
 apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRole
+metadata:
+  name: prometheus
+rules:
+- apiGroups: [""]
+  resources:
+  - nodes
+  - nodes/proxy
+  - services
+  - endpoints
+  - pods
+  verbs: ["get", "list", "watch"]
+- nonResourceURLs: ["/metrics"]
+  verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1beta1
 kind: ClusterRoleBinding
 metadata:
   name: prometheus
-  namespace: monitoring
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -49,33 +44,20 @@ metadata:
   name: prometheus
   namespace: monitoring
 spec:
-  type: NodePort
   selector:
     app: prometheus
+  type: NodePort
   ports:
   - name: prometheus
     protocol: TCP
     port: 9090
-    targetPort: 9090
-    nodePort: 30102
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: prometheus-pvc
-  namespace: monitoring
-spec:
-  accessModes:
-  - ReadWriteOnce
-  resources:
-    requests:
-      storage: 20Gi
-  storageClassName: standard
+    targetPort: 80
+    nodePort: 31090
 ---
 apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
-  name: prometheus-deployment
+  name: prometheus
   namespace: monitoring
 spec:
   replicas: 1
@@ -93,10 +75,10 @@ spec:
       labels:
         app: prometheus
     spec:
+      serviceAccount: prometheus
       containers:
       - name: prometheus
         image: prom/prometheus:v1.5.2
-        serviceAccount: prometheus
         args:
           - '-storage.local.retention=360h'
           - '-storage.local.memory-chunks=1048576'
@@ -109,11 +91,13 @@ spec:
           httpGet:
             path: /graph
             port: 9090
-          periodSeconds: 1
+          periodSeconds: 3
+        livenessProbe:
+          httpGet:
+            path: /graph
+            port: 9090
           initialDelaySeconds: 60
-          timeoutSeconds: 1
-          successThreshold: 1
-          failureThreshold: 10
+          periodSeconds: 3
         volumeMounts:
         - name: config-volume
           mountPath: /etc/prometheus
@@ -121,7 +105,30 @@ spec:
           mountPath: /etc/prometheus-rules
         - name: prometheus-pv
           mountPath: /prometheus
+      - name: nginx-sidecar
+        image: nginx:1.12
+        ports:
+          - containerPort: 80
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 80
+          periodSeconds: 3
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 80
+          initialDelaySeconds: 60
+          periodSeconds: 3
+        volumeMounts:
+        - name: nginx-sidecar-config
+          mountPath: /etc/nginx/conf.d
+        - name: nginx-basic-auth
+          mountPath: /mnt
       volumes:
+      - name: nginx-basic-auth
+        secret:
+          secretName: basic-auth
       - name: config-volume
         configMap:
           name: prometheus-configmap
@@ -131,8 +138,63 @@ spec:
       - name: prometheus-pv
         persistentVolumeClaim: 
           claimName: prometheus-pvc
+      - name: nginx-sidecar-config
+        configMap:
+          name: prometheus-nginx-sidecar
       nodeSelector:
         beta.kubernetes.io/os: linux
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-nginx-sidecar
+  namespace: monitoring
+data:
+  prometheus.socks.dippynark.co.uk.conf: |
+    upstream prometheus {
+      server localhost:9090;
+    }
+
+    server {
+      listen 80;
+      server_name prometheus.socks.dippynark.co.uk;
+      root /var/www/html;
+
+      # Proxy the health check to the upstream server at /
+      location /healthz {
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header Host $http_host;
+        proxy_redirect off;
+        proxy_next_upstream error;
+        proxy_pass http://prometheus/graph;
+        break;
+      }
+
+      # Proxy everything else to the upstream server, enforcing HTTPS
+      location / {
+
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header Host $http_host;
+        proxy_redirect off;
+        proxy_next_upstream error;
+
+        # Any request that did not originally come in over HTTPS gets redirected
+        if ($http_x_forwarded_proto != "https") {
+          rewrite ^(.*)$ https://$server_name$1 permanent;
+        }
+
+        # Enable basic auth
+        auth_basic "Restricted";                                
+        auth_basic_user_file /mnt/.htpasswd;
+
+        proxy_pass http://prometheus;
+
+        # Add HTTP Strict Transport Security for good measure.
+        add_header Strict-Transport-Security "max-age=31536000; includeSubDomains;";
+      }
+    }
 ---
 apiVersion: v1
 kind: Service
@@ -219,7 +281,7 @@ spec:
     spec:
       containers:
       - name: read-du
-        image: giantswarm/tiny-tools
+        image: giantswarm/tiny-tools:0.2.0
         imagePullPolicy: Always
         # FIXME threshold via env var
         # The

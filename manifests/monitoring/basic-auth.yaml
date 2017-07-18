@@ -1,0 +1,8 @@
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: basic-auth
+  namespace: monitoring
+data:
+  .htpasswd: dXNlcjokYXByMSRLTmNFUzlITiRzNG5jNC9JSVp0OUl2V2VIZndjWDIuCg==

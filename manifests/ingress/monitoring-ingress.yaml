@@ -1,0 +1,38 @@
+---
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: monitoring
+  namespace: monitoring
+  annotations:
+    kubernetes.io/ingress.global-static-ip-name: "monitoring-static-ip"
+    kubernetes.io/tls-acme: "true"
+    kubernetes.io/ingress.class: "gce"
+  labels:
+    name: monitoring
+spec:
+  tls:
+  - secretName: monitoring-dippynark-tls
+    hosts:
+    - prometheus.socks.dippynark.co.uk
+    - grafana.socks.dippynark.co.uk 
+    - kibana.socks.dippynark.co.uk
+  rules:
+  - host: prometheus.socks.dippynark.co.uk
+    http:
+      paths:
+      - backend:
+          serviceName: prometheus
+          servicePort: 9090
+  - host: grafana.socks.dippynark.co.uk
+    http:
+      paths:
+      - backend:
+          serviceName: grafana
+          servicePort: 3000
+  - host: kibana.socks.dippynark.co.uk
+    http:
+      paths:
+      - backend:
+          serviceName: kibana
+          servicePort: 5601
