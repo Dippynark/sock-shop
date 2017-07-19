@@ -1,32 +1,96 @@
-#https://github.com/kubernetes/kubernetes/tree/master/cluster/addons/fluentd-elasticsearch
 ---
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRoleBinding
+metadata:
+  name: fluentd
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: fluentd
+subjects:
+- kind: ServiceAccount
+  name: fluentd
+  namespace: monitoring
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  name: fluentd
+  namespace: monitoring
+rules:
+  - apiGroups: ["*"]
+    resources:
+      - pods
+      - namespaces
+    verbs:
+      - get
+      - watch
+      - list
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: fluentd
+  namespace: monitoring
+---
+#http://docs.fluentd.org/v0.12/articles/kubernetes-fluentd
+#https://github.com/fluent/fluentd-kubernetes-daemonset/blob/master/fluentd-daemonset-elasticsearch.yaml
 apiVersion: extensions/v1beta1
 kind: DaemonSet
 metadata:
   name: fluentd
   namespace: monitoring
   labels:
-    tier: monitoring
-    name: fluentd
+    k8s-app: fluentd-logging
+    version: v1
+    kubernetes.io/cluster-service: "true"
 spec:
   template:
     metadata:
       labels:
-        name: fluentd
+        k8s-app: fluentd-logging
+        version: v1
+        kubernetes.io/cluster-service: "true"
     spec:
+      tolerations:
+      - key: node-role.kubernetes.io/master
+        effect: NoSchedule
+      serviceAccount: fluentd
       containers:
-       - image: weaveworksdemos/log-server:0.1.1
-         name: fluentd
-         env:
-            - name: FLUENTD_CONF
-              value: elk.conf
-         volumeMounts:
-            - name: varlibdockercontainers
-              mountPath: /var/lib/docker/containers
-              readOnly: true
-      volumes:
+      - name: fluentd
+        image: fluent/fluentd-kubernetes-daemonset:v0.12.33-elasticsearch
+        env:
+          - name:  FLUENT_ELASTICSEARCH_HOST
+            value: "elasticsearch"
+          - name:  FLUENT_ELASTICSEARCH_PORT
+            value: "9200"
+          - name: FLUENT_ELASTICSEARCH_SCHEME
+            value: "http"
+          # X-Pack Authentication
+          # =====================
+          #- name: FLUENT_ELASTICSEARCH_USER
+          #  value: "elastic"
+          #- name: FLUENT_ELASTICSEARCH_PASSWORD
+          #  value: "changeme"
+        resources:
+          limits:
+            memory: 200Mi
+          requests:
+            cpu: 100m
+            memory: 200Mi
+        volumeMounts:
+        - name: varlog
+          mountPath: /var/log
         - name: varlibdockercontainers
-          hostPath:
-            path: /var/lib/docker/containers
-      nodeSelector:
-        beta.kubernetes.io/os: linux
+          mountPath: /var/lib/docker/containers
+          readOnly: true
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - name: varlog
+        hostPath:
+          path: /var/log
+      - name: varlibdockercontainers
+        hostPath:
+          path: /var/lib/docker/containers
+
+

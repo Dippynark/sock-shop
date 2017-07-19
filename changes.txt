@@ -5,6 +5,7 @@ Autoscaling
 Alert Manager
 Add liveness and readiness to fluentd
 Use ant-affinity
+Add terminationGracePeriodSeconds
 
 Best Practices:
 TODO:
