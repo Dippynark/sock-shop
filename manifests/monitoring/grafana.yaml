@@ -65,12 +65,11 @@ spec:
         - name: web
           containerPort: 3000
         resources:
-          # keep request = limit to keep this container in guaranteed class
           limits:
-            cpu: 100m
+            cpu: 500m
             memory: 100Mi
           requests:
-            cpu: 100m
+            cpu: 200m
             memory: 100Mi
         env:
           # The following env variables set up basic auth twith the default admin user and admin password.
@@ -105,6 +104,13 @@ spec:
           mountPath: /var/lib/grafana
       - name: nginx-sidecar
         image: nginx:1.12
+        resources:
+          limits:
+            cpu: 300m
+            memory: 300Mi
+          requests:
+            cpu: 100m
+            memory: 100Mi
         ports:
           - containerPort: 80
         readinessProbe:
@@ -142,14 +148,14 @@ metadata:
   name: grafana-nginx-sidecar
   namespace: monitoring
 data:
-  grafana.socks.dippynark.co.uk.conf: |
+  grafana.socks.lukeaddison.co.uk.conf: |
     upstream grafana {
       server localhost:3000;
     }
 
     server {
       listen 80;
-      server_name grafana.socks.dippynark.co.uk;
+      server_name grafana.socks.lukeaddison.co.uk;
       root /var/www/html;
 
       # Proxy the health check to the upstream server at /

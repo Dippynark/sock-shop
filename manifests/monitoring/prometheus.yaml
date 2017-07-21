@@ -87,6 +87,13 @@ spec:
         ports:
         - name: web
           containerPort: 9090
+        resources:
+          limits:
+            cpu: 1
+            memory: 3Gi
+          requests:
+            cpu: 200m
+            memory: 1Gi
         readinessProbe:
           httpGet:
             path: /graph
@@ -107,6 +114,13 @@ spec:
           mountPath: /prometheus
       - name: nginx-sidecar
         image: nginx:1.12
+        resources:
+          limits:
+            cpu: 300m
+            memory: 300Mi
+          requests:
+            cpu: 100m
+            memory: 100Mi
         ports:
           - containerPort: 80
         readinessProbe:
@@ -150,14 +164,14 @@ metadata:
   name: prometheus-nginx-sidecar
   namespace: monitoring
 data:
-  prometheus.socks.dippynark.co.uk.conf: |
+  prometheus.socks.lukeaddison.co.uk.conf: |
     upstream prometheus {
       server localhost:9090;
     }
 
     server {
       listen 80;
-      server_name prometheus.socks.dippynark.co.uk;
+      server_name prometheus.socks.lukeaddison.co.uk;
       root /var/www/html;
 
       # Proxy the health check to the upstream server at /
@@ -224,8 +238,8 @@ data:
     # Alert for high error rate in the Sock Shop.
 
     ALERT HighErrorRate
-      IF rate(request_duration_seconds_count{status_code="500"}[5m]) > 1
-      FOR 5m
+      IF rate(request_duration_seconds_count{status_code="500"}[5m]) > 0.01
+      FOR 1m
       LABELS { severity = "slack" }
       ANNOTATIONS {
         summary = "High HTTP 500 error rates",

@@ -78,6 +78,14 @@ spec:
   selector:
     name: catalogue-db
 ---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: catalogue-db
+  namespace: sock-shop
+data:
+  password: ZmFrZV9wYXNzd29yZA==
+---
 apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
@@ -96,13 +104,23 @@ spec:
       - name: catalogue-db
         image: weaveworksdemos/catalogue-db:0.3.0
         env:
-          - name: MYSQL_ROOT_PASSWORD
-            value: fake_password
-          - name: MYSQL_DATABASE
-            value: socksdb
+        - name: MYSQL_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: catalogue-db
+              key: password
+        - name: MYSQL_DATABASE
+          value: socksdb
         ports:
         - name: mysql
           containerPort: 3306
+        resources:
+          limits:
+            cpu: 0.4
+            memory: 2000Mi
+          requests:
+            cpu: 0.1
+            memory: 1000Mi
         livenessProbe:
           tcpSocket:
             port: 3306

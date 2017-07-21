@@ -35,6 +35,11 @@ spec:
         ports:
           - name: kibana
             containerPort: 5601
+        resources:
+          limits:
+            cpu: 100m
+          requests:
+            cpu: 100m
         readinessProbe:
           httpGet:
             path: /
@@ -48,6 +53,13 @@ spec:
           periodSeconds: 3
       - name: nginx-sidecar
         image: nginx:1.12
+        resources:
+          limits:
+            cpu: 300m
+            memory: 300Mi
+          requests:
+            cpu: 100m
+            memory: 100Mi
         ports:
           - containerPort: 80
         readinessProbe:
@@ -80,14 +92,14 @@ metadata:
   name: kibana-nginx-sidecar
   namespace: monitoring
 data:
-  kibana.socks.dippynark.co.uk.conf: |
+  kibana.socks.lukeaddison.co.uk.conf: |
     upstream kibana {
       server localhost:5601;
     }
 
     server {
       listen 80;
-      server_name kibana.socks.dippynark.co.uk;
+      server_name kibana.socks.lukeaddison.co.uk;
       root /var/www/html;
 
       # Proxy the health check to the upstream server at /

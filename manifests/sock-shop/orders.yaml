@@ -104,12 +104,21 @@ spec:
       labels:
         name: orders-db
     spec:
+      securityContext:
+        fsGroup: 999
       containers:
       - name: orders-db
         image: mongo:3.4.6
         ports:
         - name: mongo
           containerPort: 27017
+        resources:
+          limits:
+            cpu: 300m
+            memory: 2000Mi
+          requests:
+            cpu: 300m
+            memory: 1000Mi
         securityContext:
           capabilities:
             drop:
@@ -131,10 +140,15 @@ spec:
         volumeMounts:
         - mountPath: /tmp
           name: tmp-volume
+        - name: db-orders-storage
+          mountPath: /data/db
       volumes:
         - name: tmp-volume
           emptyDir:
             medium: Memory
+        - name: db-orders-storage
+          persistentVolumeClaim:
+            claimName: orders-db-pvc  
       nodeSelector:
         beta.kubernetes.io/os: linux
 

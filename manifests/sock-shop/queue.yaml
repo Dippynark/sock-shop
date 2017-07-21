@@ -105,6 +105,13 @@ spec:
               - SETUID
               - DAC_OVERRIDE
           readOnlyRootFilesystem: true
+        resources:
+          limits:
+            cpu: 300m
+            memory: 2000Mi
+          requests:
+            cpu: 100m
+            memory: 1000Mi
         livenessProbe:
           tcpSocket:
             port: 5672
@@ -114,5 +121,12 @@ spec:
           tcpSocket:
             port: 5672
           periodSeconds: 3
+        volumeMounts:
+        - name: rabbitmq-storage
+          mountPath: /var/lib/rabbitmq
+      volumes:
+      - name: rabbitmq-storage
+        persistentVolumeClaim:
+          claimName: rabbitmq-pvc
       nodeSelector:
         beta.kubernetes.io/os: linux
